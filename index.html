@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+<meta charset="UTF-8">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#c8a96e">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>اردو خطاط</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Scheherazade+New:wght@400;700&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a28;
+  --border:#2a2a40;--accent:#c8a96e;--text:#f0ead6;--muted:#6a6a8a;--red:#ff6b6b;
+  --tab-h:56px;--header-h:54px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Nastaliq Urdu',serif;display:flex;flex-direction:column;}
+
+/* HEADER */
+.hdr{height:var(--header-h);display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#18101a,#0a0a0f);flex-shrink:0;}
+.hdr h1{font-size:1.35rem;color:var(--accent);font-family:'Scheherazade New',serif;text-shadow:0 0 20px rgba(200,169,110,.35);}
+.lang-toggle{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.lang-btn{background:var(--surface2);border:none;color:var(--muted);padding:.38rem .58rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.68rem;transition:all .2s;}
+.lang-btn.active{background:rgba(200,169,110,.18);color:var(--accent);}
+
+/* SCROLL AREA */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 6px);}
+
+/* PREVIEW STRIP — sticky */
+.preview-strip{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding:.55rem .7rem .45rem;}
+.preview-strip-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
+.preview-lbl{font-family:Arial,sans-serif;font-size:.6rem;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;direction:ltr;}
+.mode-tabs{display:none;border:1px solid var(--border);border-radius:7px;overflow:hidden;}
+.mode-tab{background:var(--surface2);border:none;color:var(--muted);padding:.3rem .58rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.64rem;transition:all .2s;}
+.mode-tab.active{background:rgba(200,169,110,.15);color:var(--accent);}
+.canvas-wrap{display:flex;justify-content:center;background:#000;border-radius:8px;overflow:hidden;}
+#urduCanvas{max-width:100%;max-height:36vh;width:100%;object-fit:contain;display:block;border-radius:8px;touch-action:none;}
+#urduCanvas.drag-mode{cursor:move;}
+.canvas-hint{font-family:Arial,sans-serif;font-size:.6rem;color:var(--muted);text-align:center;direction:ltr;margin-top:.28rem;display:none;}
+
+/* DOWNLOAD ROW */
+.dl-row{display:flex;gap:.5rem;padding:.45rem .7rem .3rem;flex-shrink:0;}
+.dl-btn{flex:1;padding:.6rem .4rem;border-radius:9px;border:none;cursor:pointer;font-family:Arial,sans-serif;font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.3rem;-webkit-user-select:none;user-select:none;}
+.dl-btn-bg{background:linear-gradient(135deg,#c8a96e,#e8c98e);color:#1a1000;}
+.dl-btn-bg:active{opacity:.82;}
+.dl-btn-png{background:transparent;border:1.5px solid var(--accent);color:var(--accent);}
+.dl-btn-png:active{background:rgba(200,169,110,.12);}
+
+/* TAB BAR */
+.tab-bar{height:var(--tab-h);display:flex;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom);}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;cursor:pointer;border:none;background:none;color:var(--muted);-webkit-user-select:none;user-select:none;transition:color .18s;}
+.tab-item .ti{font-size:1.15rem;line-height:1;}
+.tab-item .tl{font-family:Arial,sans-serif;font-size:.52rem;letter-spacing:.2px;}
+.tab-item.active{color:var(--accent);}
+
+/* TAB SECTIONS */
+.tab-section{display:none;}
+.tab-section.active{display:block;}
+
+/* PANELS */
+.panels{padding:.55rem .7rem;display:flex;flex-direction:column;gap:.6rem;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.panel-hdr-left{display:flex;align-items:center;gap:.4rem;}
+.panel-badge{width:3px;height:12px;background:var(--accent);border-radius:2px;flex-shrink:0;}
+.panel-title{font-size:.66rem;color:var(--accent);letter-spacing:.8px;font-family:Arial,sans-serif;direction:ltr;text-transform:uppercase;}
+.panel-arrow{font-size:.65rem;color:var(--muted);transition:transform .22s;}
+.panel-body{padding:0 .8rem .8rem;display:none;}
+.panel-body.open{display:block;}
+.panel.always-open .panel-hdr{cursor:default;}
+.panel.always-open .panel-arrow{display:none;}
+.panel.always-open .panel-body{display:block;padding-top:.05rem;}
+
+/* TEXTAREA */
+textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:.7rem;font-size:1.1rem;line-height:2.1;resize:none;outline:none;direction:rtl;font-family:'Noto Nastaliq Urdu',serif;-webkit-appearance:none;transition:border-color .2s;}
+textarea:focus{border-color:var(--accent);}
+textarea::placeholder{color:var(--muted);}
+
+/* FONT GRID */
+.font-grid{display:grid;grid-template-columns:1fr 1fr;gap:.38rem;}
+.font-btn{background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:9px;padding:.48rem .35rem;cursor:pointer;text-align:center;direction:rtl;-webkit-user-select:none;user-select:none;transition:border-color .18s,background .18s;}
+.font-btn .fn{font-size:.88rem;display:block;line-height:1.9;}
+.font-btn .fl{font-size:.57rem;color:var(--muted);font-family:Arial,sans-serif;direction:ltr;display:block;}
+.font-btn.active{border-color:var(--accent);background:rgba(200,169,110,.1);}
+.font-btn:active{opacity:.72;}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:.75rem;text-align:center;cursor:pointer;background:var(--surface2);position:relative;transition:border-color .2s,background .2s;}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone .uz-icon{font-size:1.3rem;display:block;margin-bottom:.18rem;}
+.upload-zone .uz-label{font-family:Arial,sans-serif;font-size:.7rem;color:var(--muted);}
+.upload-zone .uz-sub{font-family:Arial,sans-serif;font-size:.58rem;color:var(--muted);opacity:.6;margin-top:.1rem;}
+.upload-zone.dragover{border-color:var(--accent);background:rgba(200,169,110,.07);}
+.uploaded-fonts{display:flex;flex-direction:column;gap:.28rem;margin-top:.45rem;max-height:130px;overflow-y:auto;}
+.ufb{background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:8px;padding:.38rem .5rem;cursor:pointer;display:flex;align-items:center;gap:.32rem;-webkit-user-select:none;user-select:none;}
+.ufb.active{border-color:var(--accent);background:rgba(200,169,110,.1);}
+.ufb-name{font-family:Arial,sans-serif;font-size:.57rem;color:var(--muted);max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ufb-preview{font-size:.88rem;direction:rtl;flex:1;text-align:right;}
+.ufb-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.78rem;padding:.08rem .13rem;flex-shrink:0;}
+.ufb-del:active{color:var(--red);}
+
+/* SLIDERS */
+.slider-row{display:flex;align-items:center;gap:.5rem;direction:ltr;margin-bottom:.48rem;}
+.slider-row label{color:var(--muted);font-size:.66rem;font-family:Arial,sans-serif;min-width:76px;}
+.slider-row span{color:var(--accent);font-size:.66rem;font-family:Arial,sans-serif;min-width:36px;text-align:right;}
+input[type=range]{flex:1;accent-color:var(--accent);cursor:pointer;}
+
+/* COLORS */
+.color-row{display:flex;align-items:center;gap:.6rem;direction:ltr;margin-bottom:.42rem;}
+.color-row label{color:var(--muted);font-size:.66rem;font-family:Arial,sans-serif;min-width:85px;}
+input[type=color]{width:38px;height:30px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;background:var(--surface2);}
+
+/* STYLE BTNS */
+.style-row{display:flex;gap:.36rem;direction:ltr;flex-wrap:wrap;}
+.style-btn{background:var(--surface2);border:1.5px solid var(--border);color:var(--text);border-radius:7px;padding:.35rem .62rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.68rem;-webkit-user-select:none;user-select:none;transition:all .18s;}
+.style-btn.active{background:rgba(200,169,110,.15);border-color:var(--accent);color:var(--accent);}
+.style-btn:active{opacity:.72;}
+
+/* BG */
+.bg-presets{display:flex;gap:.38rem;flex-wrap:wrap;direction:ltr;}
+.bg-preset{width:34px;height:34px;border-radius:7px;border:2.5px solid transparent;cursor:pointer;flex-shrink:0;transition:border-color .15s,transform .15s;}
+.bg-preset.active{border-color:var(--accent);transform:scale(1.1);}
+.bg-preset:active{transform:scale(.9);}
+.grad-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:.38rem;direction:ltr;}
+.grad-btn{height:38px;border-radius:8px;border:2.5px solid transparent;cursor:pointer;transition:border-color .15s;}
+.grad-btn.active{border-color:var(--accent);}
+.grad-btn:active{opacity:.8;}
+
+/* SIZE */
+.size-grid{display:grid;grid-template-columns:1fr 1fr;gap:.38rem;direction:ltr;}
+.size-btn{background:var(--surface2);border:1.5px solid var(--border);color:var(--muted);border-radius:7px;padding:.36rem .35rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.66rem;text-align:center;-webkit-user-select:none;user-select:none;transition:all .18s;}
+.size-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,.1);}
+.size-btn:active{opacity:.72;}
+.custom-size-row{display:flex;gap:.38rem;margin-top:.48rem;direction:ltr;align-items:center;}
+.custom-size-row input{flex:1;width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:.38rem .45rem;font-family:Arial,sans-serif;font-size:.7rem;outline:none;-webkit-appearance:none;text-align:center;}
+.custom-size-row input:focus{border-color:var(--accent);}
+.apply-btn{background:rgba(200,169,110,.15);border:1px solid var(--accent);color:var(--accent);border-radius:7px;padding:.38rem .6rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.68rem;white-space:nowrap;-webkit-user-select:none;user-select:none;}
+.apply-btn:active{background:rgba(200,169,110,.28);}
+
+/* PHOTO */
+.photo-thumb{width:100%;max-height:75px;object-fit:cover;border-radius:8px;margin-top:.45rem;display:none;}
+.remove-btn{width:100%;margin-top:.4rem;background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.28);color:var(--red);border-radius:8px;padding:.36rem;cursor:pointer;font-family:Arial,sans-serif;font-size:.68rem;display:none;-webkit-user-select:none;user-select:none;}
+.remove-btn:active{background:rgba(255,107,107,.2);}
+.photo-size-info{display:none;align-items:center;gap:.38rem;margin-top:.38rem;direction:ltr;}
+.photo-size-info span:first-child{font-family:Arial,sans-serif;font-size:.62rem;color:var(--muted);}
+#photoSizeInfo{font-family:Arial,sans-serif;font-size:.68rem;color:var(--accent);}
+
+/* UTILS */
+.sec-div{height:1px;background:var(--border);margin:.45rem 0;}
+.sub-label{font-family:Arial,sans-serif;font-size:.64rem;color:var(--muted);direction:ltr;margin-bottom:.38rem;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btnUR" onclick="setLang('ur')">اردو</button>
+    <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+  </div>
+  <h1 id="hTitle">اردو خطاط</h1>
+</div>
+
+<div class="scroll-area" id="scrollArea">
+
+  <!-- STICKY PREVIEW -->
+  <div class="preview-strip">
+    <div class="preview-strip-top">
+      <span class="preview-lbl" id="previewLbl">Preview</span>
+      <div class="mode-tabs" id="modeTabs">
+        <button class="mode-tab active" id="tabMove" onclick="setDragMode('move')">✥ <span id="tabMoveTxt">Move</span></button>
+        <button class="mode-tab" id="tabEdit" onclick="setDragMode('none')">✎ <span id="tabEditTxt">Edit</span></button>
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="urduCanvas" width="600" height="300"></canvas>
+    </div>
+    <div class="canvas-hint" id="canvasHint">Drag text to reposition</div>
+  </div>
+
+  <!-- DOWNLOADS -->
+  <div class="dl-row">
+    <button class="dl-btn dl-btn-bg" onclick="downloadWithBg()">⬇ <span id="dlBgTxt">With Background</span></button>
+    <button class="dl-btn dl-btn-png" onclick="downloadTransparent()">⬇ <span id="dlPngTxt">Transparent PNG</span></button>
+  </div>
+
+  <!-- ── TEXT TAB ── -->
+  <div class="tab-section active" id="sec-text">
+    <div class="panels">
+
+      <div class="panel always-open">
+        <div class="panel-hdr">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptText">اردو متن</div></div>
+        </div>
+        <div class="panel-body open">
+          <textarea id="urduText" rows="4" placeholder="یہاں اردو لکھیں...">بسم اللہ الرحمن الرحیم</textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hdr" onclick="togglePanel(this)">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptFont">فونٹ</div></div>
+          <span class="panel-arrow">▼</span>
+        </div>
+        <div class="panel-body open">
+          <div class="font-grid">
+            <button class="font-btn active" onclick="setFont('Noto Nastaliq Urdu',this)">
+              <span class="fn" style="font-family:'Noto Nastaliq Urdu'">نستعلیق</span>
+              <span class="fl">Noto Nastaliq</span>
+            </button>
+            <button class="font-btn" onclick="setFont('Scheherazade New',this)">
+              <span class="fn" style="font-family:'Scheherazade New'">شہرزاد</span>
+              <span class="fl">Scheherazade</span>
+            </button>
+            <button class="font-btn" onclick="setFont('Amiri',this)">
+              <span class="fn" style="font-family:'Amiri'">امیری</span>
+              <span class="fl">Amiri</span>
+            </button>
+            <button class="font-btn" onclick="setFont('Noto Naskh Arabic',this)">
+              <span class="fn" style="font-family:'Noto Naskh Arabic'">نسخ</span>
+              <span class="fl">Noto Naskh</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hdr" onclick="togglePanel(this)">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptUpload">کسٹم فونٹ</div></div>
+          <span class="panel-arrow">▼</span>
+        </div>
+        <div class="panel-body">
+          <div class="upload-zone" id="fontZone">
+            <input type="file" id="fontFileInput" accept=".ttf,.otf,.woff,.woff2" multiple>
+            <span class="uz-icon">🖋</span>
+            <div class="uz-label" id="uzLabel">فونٹ اپلوڈ کریں</div>
+            <div class="uz-sub">TTF · OTF · WOFF · WOFF2</div>
+          </div>
+          <div class="uploaded-fonts" id="uploadedFontsList"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STYLE TAB ── -->
+  <div class="tab-section" id="sec-style">
+    <div class="panels">
+
+      <div class="panel always-open">
+        <div class="panel-hdr">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptAppear">متن کی ترتیب</div></div>
+        </div>
+        <div class="panel-body open">
+          <div class="slider-row">
+            <label id="lblSize">Size</label>
+            <input type="range" id="fontSize" min="14" max="140" value="52" oninput="updateVal('fsVal',this.value+'px');render()">
+            <span id="fsVal">52px</span>
+          </div>
+          <div class="slider-row">
+            <label id="lblSpacing">Line Space</label>
+            <input type="range" id="lineSpacing" min="1.0" max="3.5" step="0.1" value="1.6" oninput="updateVal('lsVal',this.value+'×');render()">
+            <span id="lsVal">1.6×</span>
+          </div>
+          <div class="slider-row">
+            <label id="lblPad">Padding</label>
+            <input type="range" id="padding" min="10" max="120" value="40" oninput="updateVal('padVal',this.value+'px');render()">
+            <span id="padVal">40px</span>
+          </div>
+          <div class="sec-div"></div>
+          <div class="color-row">
+            <label id="lblTxtColor">Text Color</label>
+            <input type="color" id="textColor" value="#ffffff" oninput="render()">
+          </div>
+          <div class="color-row">
+            <label id="lblShadowColor">Shadow</label>
+            <input type="color" id="shadowColor" value="#000000" oninput="render()">
+          </div>
+          <div class="sec-div"></div>
+          <div class="style-row">
+            <button class="style-btn active" id="shadowBtn" onclick="toggleShadow()">Shadow</button>
+            <button class="style-btn" id="boldBtn" onclick="toggleBold()">Bold</button>
+            <button class="style-btn active" id="alignBtn" onclick="toggleAlign()">Center</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── BG TAB ── -->
+  <div class="tab-section" id="sec-bg">
+    <div class="panels">
+
+      <div class="panel always-open" id="bgPanel">
+        <div class="panel-hdr">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptBg">پس منظر</div></div>
+        </div>
+        <div class="panel-body open">
+          <div class="color-row">
+            <label id="lblBgColor">BG Color</label>
+            <input type="color" id="bgColor" value="#1a6b2f" oninput="setCustomBg()">
+          </div>
+          <div class="sec-div"></div>
+          <div class="sub-label" id="lblSolid">Solid Colors</div>
+          <div class="bg-presets">
+            <div class="bg-preset active" style="background:#1a6b2f" onclick="setBg('#1a6b2f',this)"></div>
+            <div class="bg-preset" style="background:#8B0000" onclick="setBg('#8B0000',this)"></div>
+            <div class="bg-preset" style="background:#1a1a60" onclick="setBg('#1a1a60',this)"></div>
+            <div class="bg-preset" style="background:#2d1b69" onclick="setBg('#2d1b69',this)"></div>
+            <div class="bg-preset" style="background:#000000" onclick="setBg('#000000',this)"></div>
+            <div class="bg-preset" style="background:#ffffff;border-color:#555" onclick="setBg('#ffffff',this)"></div>
+            <div class="bg-preset" style="background:#c8a96e" onclick="setBg('#c8a96e',this)"></div>
+            <div class="bg-preset" style="background:#1b3a4b" onclick="setBg('#1b3a4b',this)"></div>
+          </div>
+          <div class="sec-div"></div>
+          <div class="sub-label" id="lblGrad">Gradients</div>
+          <div class="grad-presets">
+            <div class="grad-btn" style="background:linear-gradient(135deg,#1a6b2f,#2ecc71)" onclick="setGrad('linear-gradient(135deg,#1a6b2f,#2ecc71)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#8B0000,#ff6b35)" onclick="setGrad('linear-gradient(135deg,#8B0000,#ff6b35)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#1a1a60,#4a90e2)" onclick="setGrad('linear-gradient(135deg,#1a1a60,#4a90e2)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#2d1b69,#c8a96e)" onclick="setGrad('linear-gradient(135deg,#2d1b69,#c8a96e)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#000,#434343)" onclick="setGrad('linear-gradient(135deg,#000,#434343)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#c8a96e,#fffde7)" onclick="setGrad('linear-gradient(135deg,#c8a96e,#fffde7)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#1b3a4b,#00b4d8)" onclick="setGrad('linear-gradient(135deg,#1b3a4b,#00b4d8)',this)"></div>
+            <div class="grad-btn" style="background:linear-gradient(135deg,#4a0e8f,#ff6ee7)" onclick="setGrad('linear-gradient(135deg,#4a0e8f,#ff6ee7)',this)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel always-open">
+        <div class="panel-hdr">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptPhoto">تصویر</div></div>
+        </div>
+        <div class="panel-body open">
+          <div class="upload-zone" id="photoZone">
+            <input type="file" id="photoFileInput" accept="image/*">
+            <span class="uz-icon">🖼</span>
+            <div class="uz-label" id="pzLabel">تصویر اپلوڈ کریں</div>
+            <div class="uz-sub" id="pzSub">JPG · PNG · WEBP</div>
+          </div>
+          <img id="photoThumb" class="photo-thumb">
+          <div class="photo-size-info" id="photoSizeRow">
+            <span>📐</span>
+            <span id="photoSizeInfo"></span>
+          </div>
+          <button class="remove-btn" id="photoRemoveBtn" onclick="removePhoto()">🗑 <span id="removePhotoTxt">تصویر ہٹائیں</span></button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SIZE TAB ── -->
+  <div class="tab-section" id="sec-size">
+    <div class="panels">
+
+      <div class="panel always-open">
+        <div class="panel-hdr">
+          <div class="panel-hdr-left"><div class="panel-badge"></div><div class="panel-title" id="ptSize">تصویر کا سائز</div></div>
+        </div>
+        <div class="panel-body open">
+          <div class="size-grid">
+            <button class="size-btn active" onclick="setSize(600,300,this)">600 × 300</button>
+            <button class="size-btn" onclick="setSize(800,400,this)">800 × 400</button>
+            <button class="size-btn" onclick="setSize(1080,1080,this)">1080 × 1080</button>
+            <button class="size-btn" onclick="setSize(1200,630,this)">1200 × 630</button>
+          </div>
+          <div class="custom-size-row">
+            <input type="number" id="customW" placeholder="W" min="100" max="4000" value="600">
+            <span style="color:var(--muted);font-family:Arial;font-size:.8rem;">×</span>
+            <input type="number" id="customH" placeholder="H" min="100" max="4000" value="300">
+            <button class="apply-btn" onclick="applyCustomSize()">Apply</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-item active" id="tab-text" onclick="switchTab('text')">
+    <span class="ti">✏️</span>
+    <span class="tl" id="tl-text">متن</span>
+  </button>
+  <button class="tab-item" id="tab-style" onclick="switchTab('style')">
+    <span class="ti">🎨</span>
+    <span class="tl" id="tl-style">اسٹائل</span>
+  </button>
+  <button class="tab-item" id="tab-bg" onclick="switchTab('bg')">
+    <span class="ti">🖼</span>
+    <span class="tl" id="tl-bg">بیک گراؤنڈ</span>
+  </button>
+  <button class="tab-item" id="tab-size" onclick="switchTab('size')">
+    <span class="ti">📐</span>
+    <span class="tl" id="tl-size">سائز</span>
+  </button>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────
+let lang='ur';
+let state={
+  font:'Noto Nastaliq Urdu',fontSize:52,lineSpacing:1.6,
+  textColor:'#ffffff',shadowColor:'#000000',
+  shadow:true,bold:false,align:'center',
+  bg:'#1a6b2f',gradient:null,padding:40,
+  canvasW:600,canvasH:300,
+  textX:null,textY:null,
+  photoImg:null,dragMode:'move'
+};
+const canvas=document.getElementById('urduCanvas');
+const ctx=canvas.getContext('2d');
+
+// ── TRANSLATIONS ──────────────────────────────────────────
+const T={
+  ur:{
+    hTitle:'اردو خطاط',
+    ptText:'اردو متن',ptFont:'فونٹ',ptUpload:'کسٹم فونٹ',
+    ptAppear:'متن کی ترتیب',ptBg:'پس منظر',ptPhoto:'تصویر',ptSize:'سائز',
+    lblSize:'Size',lblSpacing:'Line Space',lblPad:'Padding',
+    lblTxtColor:'Text Color',lblShadowColor:'Shadow',
+    lblBgColor:'BG Color',lblSolid:'Solid Colors',lblGrad:'Gradients',
+    uzLabel:'فونٹ اپلوڈ کریں',pzLabel:'تصویر اپلوڈ کریں',pzSub:'JPG · PNG · WEBP',
+    removePhotoTxt:'تصویر ہٹائیں',previewLbl:'پیش نظارہ',
+    canvasHint:'متن کو ڈریگ کریں',
+    dlBgTxt:'پس منظر سمیت',dlPngTxt:'شفاف PNG',
+    tabMoveTxt:'منتقل',tabEditTxt:'ترمیم',
+    placeholder:'یہاں اردو لکھیں...',
+    tl_text:'متن',tl_style:'اسٹائل',tl_bg:'بیک گراؤنڈ',tl_size:'سائز'
+  },
+  en:{
+    hTitle:'Urdu Khattaat',
+    ptText:'Text',ptFont:'Font',ptUpload:'Custom Font',
+    ptAppear:'Text Style',ptBg:'Background',ptPhoto:'Photo',ptSize:'Size',
+    lblSize:'Size',lblSpacing:'Line Space',lblPad:'Padding',
+    lblTxtColor:'Text Color',lblShadowColor:'Shadow',
+    lblBgColor:'BG Color',lblSolid:'Solid Colors',lblGrad:'Gradients',
+    uzLabel:'Upload Font',pzLabel:'Upload Photo',pzSub:'JPG · PNG · WEBP',
+    removePhotoTxt:'Remove Photo',previewLbl:'Preview',
+    canvasHint:'Drag text to reposition',
+    dlBgTxt:'With Background',dlPngTxt:'Transparent PNG',
+    tabMoveTxt:'Move',tabEditTxt:'Edit',
+    placeholder:'Type Urdu text here...',
+    tl_text:'Text',tl_style:'Style',tl_bg:'Background',tl_size:'Size'
+  }
+};
+
+function setLang(l){
+  lang=l;
+  document.getElementById('btnUR').classList.toggle('active',l==='ur');
+  document.getElementById('btnEN').classList.toggle('active',l==='en');
+  document.body.dir=l==='ur'?'rtl':'ltr';
+  document.getElementById('urduText').dir='rtl';
+  const t=T[l];
+  ['hTitle','ptText','ptFont','ptUpload','ptAppear','ptBg','ptPhoto','ptSize',
+   'lblSize','lblSpacing','lblPad','lblTxtColor','lblShadowColor','lblBgColor',
+   'lblSolid','lblGrad','uzLabel','pzLabel','pzSub','removePhotoTxt','previewLbl',
+   'canvasHint','dlBgTxt','dlPngTxt','tabMoveTxt','tabEditTxt']
+  .forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t[id];});
+  document.getElementById('urduText').placeholder=t.placeholder;
+  document.getElementById('tl-text').textContent=t.tl_text;
+  document.getElementById('tl-style').textContent=t.tl_style;
+  document.getElementById('tl-bg').textContent=t.tl_bg;
+  document.getElementById('tl-size').textContent=t.tl_size;
+}
+
+// ── TABS ──────────────────────────────────────────────────
+function switchTab(name){
+  document.querySelectorAll('.tab-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('scrollArea').scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── COLLAPSIBLE PANELS ────────────────────────────────────
+function togglePanel(hdr){
+  const body=hdr.nextElementSibling;
+  const arrow=hdr.querySelector('.panel-arrow');
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arrow)arrow.style.transform=isOpen?'':'rotate(180deg)';
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function updateVal(id,val){document.getElementById(id).textContent=val;}
+function setFont(f,btn){
+  state.font=f;
+  document.querySelectorAll('.font-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.ufb').forEach(b=>b.classList.remove('active'));
+  render();
+}
+function toggleShadow(){
+  state.shadow=!state.shadow;
+  document.getElementById('shadowBtn').classList.toggle('active',state.shadow);
+  render();
+}
+function toggleBold(){
+  state.bold=!state.bold;
+  document.getElementById('boldBtn').classList.toggle('active',state.bold);
+  render();
+}
+function toggleAlign(){
+  const map={center:'right',right:'left',left:'center'};
+  state.align=map[state.align];
+  const lbl={center:'Center',right:'Right ←',left:'→ Left'};
+  document.getElementById('alignBtn').textContent=lbl[state.align];
+  state.textX=null;state.textY=null;
+  render();
+}
+function setBg(color,el){
+  state.bg=color;state.gradient=null;
+  document.querySelectorAll('.bg-preset').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.grad-btn').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('bgColor').value=color;
+  render();
+}
+function setCustomBg(){setBg(document.getElementById('bgColor').value,null);}
+function setGrad(grad,el){
+  state.gradient=grad;
+  document.querySelectorAll('.bg-preset').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.grad-btn').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');
+  render();
+}
+function setSize(w,h,btn){
+  state.canvasW=w;state.canvasH=h;
+  canvas.width=w;canvas.height=h;
+  state.textX=null;state.textY=null;
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('customW').value=w;
+  document.getElementById('customH').value=h;
+  render();
+}
+function applyCustomSize(){
+  const w=Math.max(100,Math.min(4000,parseInt(document.getElementById('customW').value)||600));
+  const h=Math.max(100,Math.min(4000,parseInt(document.getElementById('customH').value)||300));
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  canvas.width=w;canvas.height=h;
+  state.canvasW=w;state.canvasH=h;
+  state.textX=null;state.textY=null;
+  render();
+}
+function setDragMode(m){
+  state.dragMode=m;
+  document.getElementById('tabMove').classList.toggle('active',m==='move');
+  document.getElementById('tabEdit').classList.toggle('active',m==='none');
+  canvas.classList.toggle('drag-mode',m==='move');
+}
+
+// ── PHOTO ─────────────────────────────────────────────────
+const photoFileInput=document.getElementById('photoFileInput');
+const photoZone=document.getElementById('photoZone');
+photoFileInput.addEventListener('change',e=>{if(e.target.files[0])loadPhoto(e.target.files[0]);});
+photoZone.addEventListener('dragover',e=>{e.preventDefault();photoZone.classList.add('dragover');});
+photoZone.addEventListener('dragleave',()=>photoZone.classList.remove('dragover'));
+photoZone.addEventListener('drop',e=>{e.preventDefault();photoZone.classList.remove('dragover');if(e.dataTransfer.files[0])loadPhoto(e.dataTransfer.files[0]);});
+
+function loadPhoto(file){
+  if(!file.type.startsWith('image/'))return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      state.photoImg=img;state.textX=null;state.textY=null;
+      const MAX=2400;
+      let w=img.naturalWidth,h=img.naturalHeight;
+      if(w>MAX||h>MAX){const s=Math.min(MAX/w,MAX/h);w=Math.round(w*s);h=Math.round(h*s);}
+      canvas.width=w;canvas.height=h;state.canvasW=w;state.canvasH=h;
+      document.getElementById('customW').value=w;
+      document.getElementById('customH').value=h;
+      document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('photoSizeInfo').textContent=w+' × '+h+' px';
+      document.getElementById('photoSizeRow').style.display='flex';
+      const thumb=document.getElementById('photoThumb');
+      thumb.src=ev.target.result;thumb.style.display='block';
+      document.getElementById('photoRemoveBtn').style.display='block';
+      document.getElementById('bgPanel').style.display='none';
+      document.getElementById('modeTabs').style.display='flex';
+      document.getElementById('canvasHint').style.display='block';
+      setDragMode('move');
+      render();
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto(){
+  state.photoImg=null;state.textX=null;state.textY=null;
+  document.getElementById('photoThumb').style.display='none';
+  document.getElementById('photoRemoveBtn').style.display='none';
+  document.getElementById('photoSizeRow').style.display='none';
+  document.getElementById('bgPanel').style.display='block';
+  document.getElementById('modeTabs').style.display='none';
+  document.getElementById('canvasHint').style.display='none';
+  document.getElementById('photoFileInput').value='';
+  canvas.width=state.canvasW;canvas.height=state.canvasH;
+  render();
+}
+
+// ── DRAG TEXT ─────────────────────────────────────────────
+let drag={active:false,startX:0,startY:0,origX:0,origY:0};
+function getPos(e){
+  const r=canvas.getBoundingClientRect();
+  const sx=canvas.width/r.width,sy=canvas.height/r.height;
+  const src=e.touches?e.touches[0]:e;
+  return{x:(src.clientX-r.left)*sx,y:(src.clientY-r.top)*sy};
+}
+canvas.addEventListener('mousedown',startDrag);
+canvas.addEventListener('touchstart',startDrag,{passive:true});
+function startDrag(e){
+  if(state.dragMode!=='move')return;
+  const p=getPos(e);
+  drag.active=true;drag.startX=p.x;drag.startY=p.y;
+  drag.origX=state.textX!==null?state.textX:canvas.width/2;
+  drag.origY=state.textY!==null?state.textY:canvas.height/2;
+}
+window.addEventListener('mousemove',doDrag);
+window.addEventListener('touchmove',doDrag,{passive:false});
+function doDrag(e){
+  if(!drag.active)return;
+  if(e.cancelable)e.preventDefault();
+  const p=getPos(e);
+  state.textX=drag.origX+(p.x-drag.startX);
+  state.textY=drag.origY+(p.y-drag.startY);
+  render();
+}
+window.addEventListener('mouseup',()=>{drag.active=false;});
+window.addEventListener('touchend',()=>{drag.active=false;});
+
+// ── RENDER ────────────────────────────────────────────────
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawBg(ctx,canvas.width,canvas.height);
+  drawText(ctx,canvas.width,canvas.height);
+}
+function drawBg(c,w,h){
+  if(state.photoImg){
+    c.drawImage(state.photoImg,0,0,w,h);
+  } else if(state.gradient){
+    const colors=state.gradient.match(/#[0-9a-fA-F]{3,8}/g);
+    const angle=(state.gradient.match(/(\d+)deg/)||['','135'])[1];
+    const rad=parseFloat(angle)*Math.PI/180;
+    const grad=c.createLinearGradient(0,0,w*Math.cos(rad),h*Math.sin(rad));
+    if(colors&&colors.length>=2){grad.addColorStop(0,colors[0]);grad.addColorStop(1,colors[1]);}
+    c.fillStyle=grad;c.fillRect(0,0,w,h);
+  } else {
+    c.fillStyle=state.bg;c.fillRect(0,0,w,h);
+  }
+}
+function drawText(c,w,h){
+  const text=document.getElementById('urduText').value||'اردو متن';
+  const fs=parseInt(document.getElementById('fontSize').value);
+  const ls=parseFloat(document.getElementById('lineSpacing').value);
+  const tc=document.getElementById('textColor').value;
+  const sc=document.getElementById('shadowColor').value;
+  const pad=parseInt(document.getElementById('padding').value);
+  c.font=`${state.bold?'bold':'normal'} ${fs}px "${state.font}"`;
+  c.direction='rtl';c.textBaseline='middle';
+  const maxW=w-pad*2;
+  const lines=wrapText(c,text,maxW);
+  const lh=fs*ls;
+  const totalH=lines.length*lh;
+  let defX;
+  if(state.align==='center'){c.textAlign='center';defX=w/2;}
+  else if(state.align==='right'){c.textAlign='right';defX=w-pad;}
+  else{c.textAlign='left';defX=pad;}
+  const ax=state.textX!==null?state.textX:defX;
+  const ay=state.textY!==null?state.textY:h/2;
+  const startY=ay-totalH/2+lh/2;
+  lines.forEach((line,i)=>{
+    const y=startY+i*lh;
+    if(state.shadow){c.shadowColor=sc+'cc';c.shadowBlur=14;c.shadowOffsetX=2;c.shadowOffsetY=3;}
+    else{c.shadowColor='transparent';c.shadowBlur=0;}
+    c.fillStyle=tc;
+    c.fillText(line,ax,y);
+  });
+  c.shadowBlur=0;c.shadowColor='transparent';
+}
+function wrapText(c,text,maxW){
+  const paragraphs=text.split('\n');
+  const finalLines=[];
+  for(const para of paragraphs){
+    if(para.trim()===''){finalLines.push('');continue;}
+    const words=para.split(' ');let cur='';
+    for(const w of words){
+      const test=cur?cur+' '+w:w;
+      if(c.measureText(test).width>maxW&&cur){finalLines.push(cur);cur=w;}
+      else cur=test;
+    }
+    if(cur!=='')finalLines.push(cur);
+  }
+  return finalLines.length?finalLines:[''];
+}
+
+// ── DOWNLOADS ─────────────────────────────────────────────
+function triggerDownload(dataUrl,filename){
+  const a=document.createElement('a');
+  a.href=dataUrl;a.download=filename;a.style.display='none';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>document.body.removeChild(a),200);
+}
+function downloadWithBg(){render();triggerDownload(canvas.toDataURL('image/png'),'urdu-art.png');}
+function downloadTransparent(){
+  const tc=document.createElement('canvas');
+  tc.width=canvas.width;tc.height=canvas.height;
+  const tctx=tc.getContext('2d');
+  tctx.clearRect(0,0,tc.width,tc.height);
+  drawText(tctx,tc.width,tc.height);
+  triggerDownload(tc.toDataURL('image/png'),'urdu-transparent.png');
+}
+
+// ── CUSTOM FONT + IndexedDB ───────────────────────────────
+let uploadedFonts=[];let db;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open('UrduKhattaatDB',1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore('fonts',{keyPath:'name'});
+    req.onsuccess=e=>res(e.target.result);req.onerror=rej;
+  });
+}
+async function dbSave(n,b){const tx=db.transaction('fonts','readwrite');tx.objectStore('fonts').put({name:n,buffer:b});}
+async function dbDelete(n){const tx=db.transaction('fonts','readwrite');tx.objectStore('fonts').delete(n);}
+async function dbGetAll(){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction('fonts','readonly');
+    const req=tx.objectStore('fonts').getAll();
+    req.onsuccess=()=>res(req.result);req.onerror=rej;
+  });
+}
+async function initDB(){
+  try{db=await openDB();const s=await dbGetAll();for(const f of s)await registerFont(f.name,f.buffer,false);renderFontList();}
+  catch(e){console.warn('DB:',e);}
+}
+async function registerFont(name,buffer,save=true){
+  const fam='uf_'+name.replace(/\.[^.]+$/,'').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+  const blob=new Blob([buffer]);const url=URL.createObjectURL(blob);
+  const ff=new FontFace(fam,`url(${url})`);
+  try{
+    const loaded=await ff.load();document.fonts.add(loaded);
+    uploadedFonts.push({name,family:fam,objectUrl:url});
+    if(save&&db)await dbSave(name,buffer);return true;
+  }catch(e){URL.revokeObjectURL(url);return false;}
+}
+const fontFileInput=document.getElementById('fontFileInput');
+const fontZone=document.getElementById('fontZone');
+fontFileInput.addEventListener('change',e=>{Array.from(e.target.files).forEach(loadFontFile);fontFileInput.value='';});
+fontZone.addEventListener('dragover',e=>{e.preventDefault();fontZone.classList.add('dragover');});
+fontZone.addEventListener('dragleave',()=>fontZone.classList.remove('dragover'));
+fontZone.addEventListener('drop',e=>{e.preventDefault();fontZone.classList.remove('dragover');Array.from(e.dataTransfer.files).forEach(loadFontFile);});
+function loadFontFile(file){
+  if(!file.name.match(/\.(ttf|otf|woff|woff2)$/i))return;
+  const r=new FileReader();
+  r.onload=async ev=>{
+    const ok=await registerFont(file.name,ev.target.result,true);
+    if(ok){renderFontList();selectUploadedFont(uploadedFonts[uploadedFonts.length-1].family);}
+    else alert((lang==='ur'?'فونٹ لوڈ نہیں ہوا: ':'Font failed: ')+file.name);
+  };
+  r.readAsArrayBuffer(file);
+}
+function renderFontList(){
+  const list=document.getElementById('uploadedFontsList');list.innerHTML='';
+  uploadedFonts.forEach((f,i)=>{
+    const btn=document.createElement('div');
+    btn.className='ufb'+(state.font===f.family?' active':'');
+    btn.innerHTML=`<div class="ufb-name" title="${f.name}">${f.name}</div>
+      <div class="ufb-preview" style="font-family:'${f.family}'">اردو متن</div>
+      <button class="ufb-del" onclick="removeFont(${i},event)">✕</button>`;
+    btn.addEventListener('click',()=>selectUploadedFont(f.family));
+    list.appendChild(btn);
+  });
+}
+function selectUploadedFont(fam){
+  state.font=fam;
+  document.querySelectorAll('.font-btn').forEach(b=>b.classList.remove('active'));
+  renderFontList();
+  document.getElementById('urduText').style.fontFamily=`'${fam}',serif`;
+  render();
+}
+async function removeFont(i,e){
+  e.stopPropagation();
+  if(db)await dbDelete(uploadedFonts[i].name);
+  URL.revokeObjectURL(uploadedFonts[i].objectUrl);
+  if(state.font===uploadedFonts[i].family){state.font='Noto Nastaliq Urdu';document.getElementById('urduText').style.fontFamily='';}
+  uploadedFonts.splice(i,1);renderFontList();render();
+}
+
+// ── LIVE ──────────────────────────────────────────────────
+['urduText','fontSize','lineSpacing','textColor','shadowColor','padding']
+  .forEach(id=>document.getElementById(id).addEventListener('input',render));
+
+window.addEventListener('load',async()=>{await initDB();render();});
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
